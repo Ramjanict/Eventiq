@@ -17,11 +17,7 @@ build/
 .vercel/
 
 # Environment files
-.env
 .env*.local
-.env.development
-.env.test
-.env.production
 !.env.example
 
 # Logs and debugging
@@ -45,7 +41,6 @@ next-env.d.ts
 Thumbs.db
 *.pem
 .idea/
-.vscode/*
 !.vscode/extensions.json
 
 # Temporary scripts & artifacts
@@ -56,3 +51,4 @@ temp_interactive_push.bat
 # Security & untracked scripts
 api.js
 backend/api.js
+config.bat

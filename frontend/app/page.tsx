@@ -1,7 +1,7 @@
 import { UniversalSignIn } from '@/components/auth/UniversalSignIn';
 
 export const metadata = {
-  title: 'Welcome to McEniesFête | Events Made Effortless',
+  title: 'Welcome to Eventiq | Events Made Effortless',
   description: 'Manage your events, guests, invitations, and event-day experience all in one place.',
 };
 

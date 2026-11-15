@@ -1,7 +1,7 @@
 {
-  "name": "McEniesVite VIP Guest Concierge",
-  "short_name": "McEniesVite VIP",
-  "description": "Exclusive VIP Guest RSVP & Digital Access Pass for McEniesVite",
+  "name": "Eventiq VIP Guest Concierge",
+  "short_name": "Eventiq VIP",
+  "description": "Exclusive VIP Guest RSVP & Digital Access Pass for Eventiq",
   "start_url": "/guest",
   "display": "standalone",
   "background_color": "#12100E",
