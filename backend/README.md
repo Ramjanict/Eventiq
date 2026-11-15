@@ -1,6 +1,6 @@
-# McEniesVite Backend Architecture & Data Models
+# Eventiq Backend Architecture & Data Models
 
-Production-grade database models and architecture for the Multi-Role Event Management Platform (**McEniesVite**).
+Production-grade database models and architecture for the Multi-Role Event Management Platform (**Eventiq**).
 
 ---
 

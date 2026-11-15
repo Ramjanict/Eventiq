@@ -1,6 +1,6 @@
-# McEniesVite Event OS — Frontend Application
+# Eventiq Event OS — Frontend Application
 
-Next.js 15 (Turbopack, App Router, React 19) frontend client for the McEniesVite Event Management Operating System.
+Next.js 15 (Turbopack, App Router, React 19) frontend client for the Eventiq Event Management Operating System.
 
 ---
 

@@ -1,4 +1,4 @@
-const CACHE = 'mceniesvite-gate-v1';
+const CACHE = 'eventiq-gate-v1';
 const SHELL = ['/gate-staff', '/gate-staff/scanner', '/gate-staff/checkin'];
 
 self.addEventListener('install', (event) => {

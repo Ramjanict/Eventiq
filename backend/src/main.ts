@@ -41,7 +41,7 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
 
   const swaggerBuilder = new DocumentBuilder()
-    .setTitle('McEniesVite Event OS API')
+    .setTitle('Eventiq Event OS API')
     .setDescription(SWAGGER_DESCRIPTION)
     .setVersion('1.1.0')
     .addBearerAuth();
@@ -56,7 +56,7 @@ async function bootstrap() {
     SWAGGER_TAG_GROUPS;
 
   const swaggerUi = {
-    customSiteTitle: 'McEniesVite API - six roles',
+    customSiteTitle: 'Eventiq API - Six Roles',
     swaggerOptions: {
       persistAuthorization: true,
       docExpansion: 'list',
@@ -73,7 +73,7 @@ async function bootstrap() {
   await app.listen(PORT, '0.0.0.0');
 
   console.log(`=================================================`);
-  console.log(`🚀 NestJS McEniesVite Platform Backend Running`);
+  console.log(`🚀 NestJS Eventiq Platform Backend Running`);
   console.log(`📡 Base URL: http://localhost:${PORT}/api`);
   console.log(`📖 Swagger API Documentation: http://localhost:${PORT}/api/docs`);
   console.log(`=================================================`);

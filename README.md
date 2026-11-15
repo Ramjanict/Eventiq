@@ -1,4 +1,4 @@
-# McEniesVite Event OS — Full-Stack Monorepo
+# Eventiq Event OS — Full-Stack Monorepo
 
 An enterprise-grade, multi-role Event Management Operating System designed to power the complete lifecycle of events across organizers, agencies, venues, turnstile staff, and attendees.
 
@@ -9,7 +9,7 @@ An enterprise-grade, multi-role Event Management Operating System designed to po
 This monorepo contains both the backend services and the responsive frontend web application:
 
 ```
-event-os-fullstack/
+Eventiq/
 ├── backend/                  # NestJS 10 Enterprise API
 │   ├── prisma/               # PostgreSQL schema & SQL helpers
 │   ├── src/
