@@ -1,0 +1,940 @@
+"use client";
+
+import * as React from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ChevronsUpDown, Download, FileSpreadsheet, Pencil, Plus, Search, Trash2, Upload } from "lucide-react";
+import { toast } from "react-toastify";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import CommonSelect from "@/components/common/CommonSelect";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { guestEntrySchema, type GuestEntryValues } from "@/lib/validations/eventWizardSchemas";
+import { useGetEventsQuery, useLazyGetEventGuestsQuery } from "@/store/Event/eventAPI";
+import type { EventGuest } from "@/store/Event/types/eventTypes";
+import {
+  GUEST_GROUPS,
+  type WizardGuest,
+} from "@/store/eventSlice/eventSlice";
+import { inputClass } from "@/components/auth/onboarding";
+import { parseGuestCsv } from "./shared/guest-csv";
+
+export const SAMPLE_GUEST_CSV = "/samples/guest-list-sample.csv";
+
+function phoneDigits(phone: string) {
+  return phone.replace(/\D/g, "");
+}
+
+function hasGuestReply(status: WizardGuest["rsvpStatus"]) {
+  return status === "Accepted" || status === "Declined" || status === "Pending";
+}
+
+function rsvpLabel(status: WizardGuest["rsvpStatus"]) {
+  if (status === "Accepted") return "Confirmed";
+  if (status === "Declined") return "Rejected";
+  if (status === "Pending") return "Tentative";
+  return "";
+}
+
+function toGuest(values: GuestEntryValues, index = 0): WizardGuest {
+  return {
+    id: `guest-${Date.now()}-${index}`,
+    name: values.name,
+    email: values.email,
+    phone: values.phone,
+    group: values.group,
+    rsvpStatus: "Not Sent",
+    invitationStatus: "Not Sent",
+    partySize: 1,
+    preference: "--",
+  };
+}
+
+function previousGuest(guest: EventGuest, index: string): WizardGuest {
+  const group = (GUEST_GROUPS as readonly string[]).includes(guest.type) ? guest.type : "General";
+  return {
+    id: `prev-${Date.now()}-${index}-${guest.id}`,
+    name: guest.name,
+    email: guest.email || "",
+    phone: guest.phone,
+    group,
+    rsvpStatus: "Not Sent",
+    invitationStatus: "Not Sent",
+    partySize: guest.partySize || 1,
+    preference: guest.preference || "--",
+  };
+}
+
+interface GuestListManagerProps {
+  guests: WizardGuest[];
+  capacity: number;
+  eventName: string;
+  onChange: (guests: WizardGuest[]) => void;
+}
+
+export function GuestListManager({
+  guests,
+  capacity,
+  eventName,
+  onChange,
+}: GuestListManagerProps) {
+  const [search, setSearch] = React.useState("");
+  const [filter, setFilter] = React.useState<
+    "All" | "Accepted" | "Declined" | "Pending" | "Not Sent"
+  >("All");
+  const [addOpen, setAddOpen] = React.useState(false);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
+  const [partySort, setPartySort] = React.useState<"asc" | "desc" | null>(null);
+  const [uploadOpen, setUploadOpen] = React.useState(false);
+  const [previousOpen, setPreviousOpen] = React.useState(false);
+  const [selectedEventIds, setSelectedEventIds] = React.useState<string[]>([]);
+  const [eventSearch, setEventSearch] = React.useState("");
+  const [eventType, setEventType] = React.useState("All");
+  const [copying, setCopying] = React.useState(false);
+  const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(10);
+  const keepOpen = React.useRef(false);
+  const { data: eventsResponse, isLoading: eventsLoading } = useGetEventsQuery(undefined, {
+    skip: !previousOpen,
+  });
+  const [fetchGuests] = useLazyGetEventGuestsQuery();
+  const [csvError, setCsvError] = React.useState("");
+  const [csvFileName, setCsvFileName] = React.useState("");
+  const [dragOver, setDragOver] = React.useState(false);
+  const csvInputRef = React.useRef<HTMLInputElement>(null);
+  const selectAllRef = React.useRef<HTMLInputElement>(null);
+
+  const form = useForm<GuestEntryValues>({
+    resolver: zodResolver(guestEntrySchema),
+    defaultValues: { name: "", email: "", group: "Family & Friend", phone: "" },
+  });
+
+  const filtered = guests.filter((guest) => {
+    const matchesFilter = filter === "All" || guest.rsvpStatus === filter;
+    const query = search.trim().toLowerCase();
+    if (!query) return matchesFilter;
+    return (
+      matchesFilter &&
+      (guest.name.toLowerCase().includes(query) ||
+        guest.phone.includes(query) ||
+        guest.group.toLowerCase().includes(query))
+    );
+  });
+  const visibleGuests = partySort
+    ? [...filtered].sort((a, b) => {
+        const left = hasGuestReply(a.rsvpStatus) ? a.partySize : -1;
+        const right = hasGuestReply(b.rsvpStatus) ? b.partySize : -1;
+        return partySort === "asc" ? left - right : right - left;
+      })
+    : filtered;
+  const pageCount = Math.max(1, Math.ceil(visibleGuests.length / pageSize));
+  const safePage = Math.min(page, pageCount);
+  const pageGuests = visibleGuests.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const statusCounts = React.useMemo(() => {
+    const counts = { All: guests.length, Accepted: 0, Declined: 0, Pending: 0, "Not Sent": 0 };
+    for (const guest of guests) counts[guest.rsvpStatus] += 1;
+    return counts;
+  }, [guests]);
+
+  React.useEffect(() => {
+    setPage(1);
+  }, [search, filter, pageSize]);
+
+  const appendGuests = (incoming: WizardGuest[]) => {
+    const room = capacity - guests.length;
+    if (room <= 0) {
+      toast.error(`This event already has ${capacity} guests.`);
+      return { added: 0, duplicates: 0, overflow: incoming.length };
+    }
+    const existing = new Set(guests.map((guest) => phoneDigits(guest.phone)));
+    const accepted: WizardGuest[] = [];
+    let duplicates = 0;
+    for (const guest of incoming) {
+      if (accepted.length >= room) break;
+      const digits = phoneDigits(guest.phone);
+      if (!digits || existing.has(digits)) {
+        duplicates += 1;
+        continue;
+      }
+      existing.add(digits);
+      accepted.push(guest);
+    }
+    if (accepted.length > 0) onChange([...guests, ...accepted]);
+    return {
+      added: accepted.length,
+      duplicates,
+      overflow: Math.max(0, incoming.length - duplicates - accepted.length),
+    };
+  };
+
+  const visibleIds = filtered.map((guest) => guest.id);
+  const selectedVisibleCount = visibleIds.filter((id) => selectedIds.includes(id)).length;
+  const allVisibleSelected = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
+
+  React.useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = selectedVisibleCount > 0 && !allVisibleSelected;
+    }
+  }, [selectedVisibleCount, allVisibleSelected]);
+
+  React.useEffect(() => {
+    const liveIds = new Set(guests.map((guest) => guest.id));
+    setSelectedIds((current) => {
+      const next = current.filter((id) => liveIds.has(id));
+      return next.length === current.length ? current : next;
+    });
+  }, [guests]);
+
+  const openAdd = () => {
+    setEditingId(null);
+    form.reset({ name: "", email: "", group: "Family & Friend", phone: "" });
+    setAddOpen(true);
+  };
+
+  const openEdit = (guest: WizardGuest) => {
+    const group = (GUEST_GROUPS as readonly string[]).includes(guest.group)
+      ? (guest.group as GuestEntryValues["group"])
+      : "General";
+    setEditingId(guest.id);
+    form.reset({ name: guest.name, email: guest.email || "", group, phone: guest.phone });
+    setAddOpen(true);
+  };
+
+  const toggleGuest = (id: string) => {
+    setSelectedIds((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+    );
+  };
+
+  const toggleVisible = () => {
+    setSelectedIds((current) => {
+      if (allVisibleSelected) return current.filter((id) => !visibleIds.includes(id));
+      return [...new Set([...current, ...visibleIds])];
+    });
+  };
+
+  const removeGuests = (ids: string[]) => {
+    if (ids.length === 0) return;
+    const removed = guests.filter((guest) => ids.includes(guest.id));
+    onChange(guests.filter((guest) => !ids.includes(guest.id)));
+    setSelectedIds((current) => current.filter((id) => !ids.includes(id)));
+    toast.success(
+      removed.length === 1
+        ? `${removed[0]?.name ?? "Guest"} removed.`
+        : `${removed.length} guests removed.`,
+    );
+  };
+
+  const submitManual = form.handleSubmit((values) => {
+    const stayOpen = keepOpen.current;
+    keepOpen.current = false;
+    const duplicate = guests.some(
+      (guest) => guest.id !== editingId && phoneDigits(guest.phone) === phoneDigits(values.phone),
+    );
+    if (duplicate) {
+      form.setError("phone", { message: "A guest with this phone number is already on the list." });
+      return;
+    }
+    if (editingId) {
+      onChange(
+        guests.map((guest) =>
+          guest.id === editingId
+            ? { ...guest, name: values.name, email: values.email, phone: values.phone, group: values.group }
+            : guest,
+        ),
+      );
+      toast.success(`${values.name} updated.`);
+    } else {
+      const result = appendGuests([toGuest(values)]);
+      if (result.added === 0) return;
+      toast.success(`${values.name} added to the guest list.`);
+    }
+    form.reset({ name: "", email: "", group: "Family & Friend", phone: "" });
+    if (stayOpen && !editingId) {
+      setEditingId(null);
+      return;
+    }
+    window.setTimeout(() => {
+      setEditingId(null);
+      setAddOpen(false);
+    }, 0);
+  });
+
+  const previousEvents = eventsResponse?.data?.events ?? [];
+  const eventTypes = ["All", ...new Set(previousEvents.map((event) => event.category).filter(Boolean))];
+  const visiblePrevious = previousEvents.filter((event) => {
+    const query = eventSearch.trim().toLowerCase();
+    const matchesType = eventType === "All" || event.category === eventType;
+    if (!matchesType) return false;
+    if (!query) return true;
+    return event.title.toLowerCase().includes(query) || event.category?.toLowerCase().includes(query);
+  });
+
+  const copyPreviousGuests = async () => {
+    if (selectedEventIds.length === 0) {
+      toast.error("Choose at least one previous event.");
+      return;
+    }
+    setCopying(true);
+    try {
+      const batches = await Promise.all(selectedEventIds.map((id) => fetchGuests({ id }).unwrap()));
+      const incoming = batches.flatMap((batch, batchIndex) =>
+        (batch.data?.guests ?? []).map((guest, index) => previousGuest(guest, `${batchIndex}-${index}`)),
+      );
+      if (incoming.length === 0) {
+        toast.error("Those events do not have guests to copy yet.");
+        return;
+      }
+      const result = appendGuests(incoming);
+      if (result.added === 0) {
+        toast.error("Those guests are already on this list, or the list is full.");
+        return;
+      }
+      toast.success(
+        `${result.added} guest${result.added === 1 ? "" : "s"} copied from previous events.`,
+      );
+      setPreviousOpen(false);
+      setSelectedEventIds([]);
+    } catch {
+      toast.error("Those guest lists could not be loaded.");
+    } finally {
+      setCopying(false);
+    }
+  };
+
+  const importCsvText = (text: string, fileName: string) => {
+    const { guests: parsed, skipped, shortenedPhones } = parseGuestCsv(text);
+    if (parsed.length === 0) {
+      setCsvError(
+        shortenedPhones
+          ? "Excel turned the WhatsApp numbers into scientific notation (2.35E+12). Put spaces in the number, for example +234 801 234 5678, then upload again."
+          : 'No guests found. Use columns "Guest Name" and "WhatsApp Phone Number", or download the sample file.',
+      );
+      return;
+    }
+    const result = appendGuests(
+      parsed.map((guest, index) => ({
+        id: `csv-${Date.now()}-${index}`,
+        name: guest.name,
+        email: guest.email ?? "",
+        phone: guest.phone,
+        group: guest.type || "General",
+        rsvpStatus: (guest.rsvpStatus as WizardGuest["rsvpStatus"]) || "Not Sent",
+        invitationStatus: "Not Sent" as const,
+        partySize: 1,
+        preference: "--",
+      })),
+    );
+    const notes = [
+      result.added > 0 ? `${result.added} guest${result.added === 1 ? "" : "s"} imported from ${fileName}.` : "",
+      skipped ? `${skipped} row(s) skipped because the name or phone was missing.` : "",
+      shortenedPhones
+        ? `${shortenedPhones} number(s) were shortened by Excel (2.35E+12). Write them as +234 801 234 5678.`
+        : "",
+      result.duplicates ? `${result.duplicates} duplicate phone number(s) skipped.` : "",
+      result.overflow ? `${result.overflow} guest(s) left out because the list is full (${capacity}).` : "",
+    ].filter(Boolean);
+    if (result.added === 0) {
+      setCsvError(notes.join(" ") || "None of those rows could be added.");
+      return;
+    }
+    setCsvError("");
+    setCsvFileName("");
+    setUploadOpen(false);
+    toast.success(notes[0]);
+    if (notes.length > 1) toast.info(notes.slice(1).join(" "));
+  };
+
+  const readCsvFile = async (file: File) => {
+    const isCsv =
+      file.name.toLowerCase().endsWith(".csv") ||
+      file.type === "text/csv" ||
+      file.type === "application/vnd.ms-excel";
+    if (!isCsv) {
+      setCsvError("Upload a .csv file. Download the sample if you need the column layout.");
+      return;
+    }
+    if (file.size > 2_000_000) {
+      setCsvError("That file is too large. Keep the guest list under 2 MB.");
+      return;
+    }
+    setCsvFileName(file.name);
+    setCsvError("");
+    importCsvText(await file.text(), file.name);
+  };
+
+  const errorText = (message?: string) =>
+    message ? <p className="mt-1.5 text-xs text-[#B33927]">{message}</p> : null;
+
+  return (
+    <>
+      <Card className="rounded-3xl border border-[#EBE3D9] dark:border-border bg-card p-6 md:p-8 shadow-2xs space-y-6">
+        <div className="space-y-1">
+          <h2 className="font-serif font-bold text-xl md:text-2xl text-[#1F140E] dark:text-foreground">
+            Add Your Guests
+          </h2>
+          <p className="text-xs text-[#736B66] dark:text-muted-foreground">
+            How would you like to build your guest list?
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="p-8 rounded-3xl border border-[#EBE3D9] bg-[#FAF8F5] dark:bg-card/60 flex flex-col items-center justify-between text-center space-y-4">
+            <div className="w-16 h-16 rounded-full bg-[#FCEDE6] text-[#6E3B1C] flex items-center justify-center text-2xl">
+              👥
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-serif font-bold text-base text-foreground">Add Manually</h3>
+              <p className="text-xs text-muted-foreground max-w-xs">
+                Perfect for small events or adding a few VIPs one by one.
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={openAdd}
+              variant="outline"
+              className="w-full max-w-xs h-11 text-xs rounded-xl border-[#EBE3D9] hover:bg-card text-foreground font-semibold"
+            >
+              <Plus className="w-4 h-4 mr-1.5" />
+              Add Guest
+            </Button>
+          </div>
+
+          <div className="p-8 rounded-3xl border border-[#EBE3D9] bg-[#FAF8F5] dark:bg-card/60 flex flex-col items-center justify-between text-center space-y-4">
+            <div className="w-16 h-16 rounded-full bg-[#E8F5E9] text-[#2E7D32] flex items-center justify-center text-2xl font-bold">
+              📊
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-serif font-bold text-base text-foreground">Import from Spreadsheet</h3>
+              <p className="text-xs text-muted-foreground max-w-xs">
+                Upload a CSV file to add multiple guests instantly.
+              </p>
+              <a
+                href={SAMPLE_GUEST_CSV}
+                download="guest-list-sample.csv"
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#6E3B1C] hover:underline"
+              >
+                <Download className="w-3 h-3" />
+                Download sample CSV
+              </a>
+            </div>
+            <Button
+              type="button"
+              onClick={() => setUploadOpen(true)}
+              className="w-full max-w-xs h-11 text-xs rounded-xl bg-[#241710] hover:bg-[#38261C] text-white font-semibold"
+            >
+              <Upload className="w-4 h-4 mr-1.5" />
+              Upload File
+            </Button>
+          </div>
+
+          <div className="p-8 rounded-3xl border border-[#EBE3D9] bg-[#FAF8F5] dark:bg-card/60 flex flex-col items-center justify-between text-center space-y-4">
+            <div className="w-16 h-16 rounded-full bg-[#F8E7D8] text-[#C47A45] flex items-center justify-center text-2xl">
+              📋
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-serif font-bold text-base text-foreground">Use a Previous Events Guest List</h3>
+              <p className="text-xs text-muted-foreground max-w-xs">
+                Choose from your previous events
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={() => setPreviousOpen(true)}
+              className="w-full max-w-xs h-11 text-xs rounded-xl bg-[#C4A484] hover:bg-[#B08A68] text-white font-semibold"
+            >
+              Choose
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="rounded-3xl border border-[#EBE3D9] dark:border-border bg-card shadow-2xs overflow-hidden">
+        <div className="p-4 md:p-6 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search"
+              className="h-10 pl-9 pr-12 text-xs rounded-xl bg-card border-[#EBE3D9]"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground border px-1.5 py-0.5 rounded-md font-mono">
+              ⌘ k
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 overflow-x-auto">
+            {selectedIds.length > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => removeGuests(selectedIds)}
+                className="h-8 px-3 text-xs rounded-full border-rose-200 text-rose-700 hover:bg-rose-50"
+              >
+                <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                Delete {selectedIds.length}
+              </Button>
+            )}
+            {(["All", "Accepted", "Declined", "Pending", "Not Sent"] as const).map((status) => (
+              <button
+                key={status}
+                type="button"
+                onClick={() => setFilter(status)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                  filter === status
+                    ? "bg-[#241710] text-white"
+                    : "bg-card border border-[#EBE3D9] text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {status} ({statusCounts[status]})
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-[#FAF7F2] dark:bg-muted/40 border-y border-[#EBE3D9] dark:border-border text-muted-foreground font-medium">
+              <tr>
+                <th className="py-3 px-4 w-10">
+                  <input
+                    ref={selectAllRef}
+                    type="checkbox"
+                    className="rounded"
+                    checked={allVisibleSelected}
+                    onChange={toggleVisible}
+                    aria-label="Select all guests"
+                    disabled={visibleIds.length === 0}
+                  />
+                </th>
+                <th className="py-3 px-4 font-semibold text-foreground">Guest &amp; Contact</th>
+                <th className="py-3 px-4 font-semibold text-foreground">Invitation Status</th>
+                <th className="py-3 px-4 font-semibold text-foreground">RSVP Status</th>
+                <th className="py-3 px-4 font-semibold text-foreground">
+                  <button
+                    type="button"
+                    onClick={() => setPartySort((current) => (current === "asc" ? "desc" : "asc"))}
+                    className="inline-flex items-center gap-1 font-semibold text-foreground"
+                  >
+                    How Many Coming
+                    <ChevronsUpDown className="size-3" />
+                  </button>
+                </th>
+                <th className="py-3 px-4 font-semibold text-foreground">Preference</th>
+                <th className="py-3 px-4 text-right font-semibold text-foreground">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#EBE3D9]">
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-muted-foreground space-y-3">
+                    <div className="text-3xl">👥</div>
+                    <p className="text-xs">
+                      {guests.length === 0
+                        ? "No guest yet. Create your first guest to start tracking RSVP"
+                        : "No guests match this search or filter."}
+                    </p>
+                    {guests.length === 0 && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={openAdd}
+                        className="bg-[#241710] text-white rounded-xl text-xs"
+                      >
+                        + Add Guest
+                      </Button>
+                    )}
+                  </td>
+                </tr>
+              ) : (
+                pageGuests.map((guest) => {
+                  const replied = hasGuestReply(guest.rsvpStatus);
+                  const label = rsvpLabel(guest.rsvpStatus);
+                  const sent = guest.invitationStatus === "Delivered";
+                  return (
+                  <tr key={guest.id} className="hover:bg-[#FAF7F2]/50">
+                    <td className="py-3 px-4">
+                      <input
+                        type="checkbox"
+                        className="rounded"
+                        checked={selectedIds.includes(guest.id)}
+                        onChange={() => toggleGuest(guest.id)}
+                        aria-label={`Select ${guest.name}`}
+                      />
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="space-y-0.5">
+                        <p className="font-semibold text-foreground">{guest.name}</p>
+                        <p className="text-[11px] text-muted-foreground font-mono">{guest.phone}</p>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span
+                        className={`inline-flex rounded-md px-2.5 py-1 text-[11px] font-medium ${
+                          sent ? "bg-[#E7E4DF] text-[#4E463F]" : "bg-[#F3EFEA] text-[#8A817A]"
+                        }`}
+                      >
+                        {sent ? "Sent" : "Not Sent"}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      {label ? (
+                        <Badge
+                          variant="secondary"
+                          className={`text-[11px] font-medium rounded-md px-2.5 py-0.5 ${
+                            guest.rsvpStatus === "Accepted"
+                              ? "bg-[#E3F3EC] text-[#2F8A5F]"
+                              : guest.rsvpStatus === "Declined"
+                                ? "bg-[#FBE4E1] text-[#B33927]"
+                                : "bg-[#F7EFE6] text-[#8C5835]"
+                          }`}
+                        >
+                          {label}
+                        </Badge>
+                      ) : (
+                        <span className="text-[13px] text-[#8C7D73]">--</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-[13px] text-foreground">
+                      {replied ? guest.partySize : "--"}
+                    </td>
+                    <td className="py-3 px-4 max-w-[180px] truncate text-[13px] text-foreground">
+                      {replied && guest.preference && guest.preference !== "--" ? guest.preference : "--"}
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <div className="inline-flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={() => openEdit(guest)}
+                          className="p-1.5 text-[#7A3B18] hover:bg-[#F7EFE6] rounded-lg"
+                          aria-label={`Edit ${guest.name}`}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeGuests([guest.id])}
+                          className="p-1.5 text-[#B33927] hover:bg-[#FBE4E1] rounded-lg"
+                          aria-label={`Remove ${guest.name}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex flex-col gap-3 border-t border-[#EBE3D9] px-4 py-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <span>Rows per page</span>
+            <CommonSelect
+              value={String(pageSize)}
+              item={[10, 20, 50].map((size) => ({ label: String(size), value: String(size) }))}
+              w={72}
+              onValueChange={(value) => setPageSize(Number(value))}
+              className="h-8 rounded-lg border border-[#EBE3D9] bg-card px-2"
+            />
+            <span>
+              showing {visibleGuests.length === 0 ? 0 : (safePage - 1) * pageSize + 1} of {visibleGuests.length} rows
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={safePage <= 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              className="rounded-lg border border-[#EBE3D9] px-3 py-1.5 disabled:opacity-40"
+            >
+              Previous
+            </button>
+            <span className="rounded-lg bg-[#C4A484] px-2.5 py-1.5 font-semibold text-white">{safePage}</span>
+            <button
+              type="button"
+              disabled={safePage >= pageCount}
+              onClick={() => setPage((current) => current + 1)}
+              className="rounded-lg border border-[#EBE3D9] px-3 py-1.5 disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </Card>
+
+      <Dialog
+        open={addOpen}
+        onOpenChange={(open) => {
+          setAddOpen(open);
+          if (!open) setEditingId(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md rounded-3xl p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle className="font-serif font-bold text-lg text-foreground">
+                {editingId ? "Edit Guest" : "Add Event Guests"}
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                McEniesVite • {eventName || "Untitled Event"}
+              </DialogDescription>
+            </div>
+            <span className="text-[11px] font-medium px-3 py-1 rounded-full bg-[#FAF0E6] text-[#B87333] border border-[#B87333]/20">
+              {guests.length} of {capacity} added
+            </span>
+          </div>
+
+          <form onSubmit={submitManual} className="space-y-4 pt-2" noValidate>
+            <div className="space-y-1.5">
+              <Label htmlFor="guest-name" className="text-xs font-semibold">
+                Guest Name
+              </Label>
+              <Input id="guest-name" placeholder="guest name" className={inputClass.input} {...form.register("name")} />
+              {errorText(form.formState.errors.name?.message)}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="guest-email" className="text-xs font-semibold">
+                Guest Email Address
+              </Label>
+              <Input id="guest-email" placeholder="guest@email.com" className={inputClass.input} {...form.register("email")} />
+              {errorText(form.formState.errors.email?.message)}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="guest-group" className="text-xs font-semibold">
+                  Guest Group
+                </Label>
+                <CommonSelect
+                  id="guest-group"
+                  value={form.watch("group")}
+                  item={GUEST_GROUPS.map((group) => ({ label: group, value: group }))}
+                  w="100%"
+                  onValueChange={(value) =>
+                    form.setValue("group", value as GuestEntryValues["group"], { shouldValidate: true })
+                  }
+                  className="w-full h-11 px-3 rounded-xl bg-card border border-[#EBE3D9] text-xs text-foreground"
+                />
+                {errorText(form.formState.errors.group?.message)}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="guest-phone" className="text-xs font-semibold">
+                  WhatsApp Phone Number
+                </Label>
+                <Input
+                  id="guest-phone"
+                  placeholder="+234 801 234 5678"
+                  className={inputClass.input}
+                  {...form.register("phone")}
+                />
+                {errorText(form.formState.errors.phone?.message)}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                type="submit"
+                variant="outline"
+                onClick={() => {
+                  keepOpen.current = !editingId;
+                }}
+                className="h-11 text-xs font-semibold rounded-xl"
+              >
+                Draft
+              </Button>
+              <Button
+                type="submit"
+                onClick={() => {
+                  keepOpen.current = false;
+                }}
+                className="h-11 text-xs font-semibold bg-[#6E3B1C] hover:bg-[#5C3117] text-white rounded-xl shadow-xs"
+              >
+                {editingId ? "Save Changes" : "Save"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={previousOpen} onOpenChange={setPreviousOpen}>
+        <DialogContent className="sm:max-w-md rounded-3xl p-5 space-y-4">
+          <DialogHeader>
+            <DialogTitle className="font-serif font-bold text-lg text-foreground">Previous events</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Copy guests from events you already created.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+              <Input
+                value={eventSearch}
+                onChange={(event) => setEventSearch(event.target.value)}
+                placeholder="Search"
+                className="h-10 pl-9 text-xs rounded-xl"
+              />
+            </div>
+            <CommonSelect
+              value={eventType}
+              item={eventTypes.map((type) => ({
+                label: type === "All" ? "Event Type" : type,
+                value: type,
+              }))}
+              w={140}
+              onValueChange={setEventType}
+              className="h-10 rounded-xl border border-[#EBE3D9] bg-card px-3 text-xs"
+            />
+          </div>
+          <div className="max-h-80 space-y-1 overflow-y-auto">
+            {eventsLoading && <p className="px-2 py-6 text-center text-xs text-muted-foreground">Loading events…</p>}
+            {!eventsLoading && visiblePrevious.length === 0 && (
+              <p className="px-2 py-6 text-center text-xs text-muted-foreground">No previous events to copy from.</p>
+            )}
+            {visiblePrevious.map((event) => {
+              const checked = selectedEventIds.includes(event.id);
+              return (
+                <button
+                  key={event.id}
+                  type="button"
+                  onClick={() =>
+                    setSelectedEventIds((current) =>
+                      current.includes(event.id)
+                        ? current.filter((id) => id !== event.id)
+                        : [...current, event.id],
+                    )
+                  }
+                  className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left hover:bg-[#FAF7F2]"
+                >
+                  <span className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-[#E7D3C4]" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-foreground">{event.title}</span>
+                    <span className="block text-xs text-muted-foreground">{event.category}</span>
+                  </span>
+                  <span
+                    className={`grid size-5 place-items-center rounded-md border ${
+                      checked ? "border-[#2D5A46] bg-[#2D5A46] text-white" : "border-[#DED7CC]"
+                    }`}
+                  >
+                    {checked ? "✓" : ""}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <Button
+            type="button"
+            disabled={copying || selectedEventIds.length === 0}
+            onClick={() => void copyPreviousGuests()}
+            className="h-11 w-full rounded-xl bg-[#241710] text-xs font-semibold text-white hover:bg-[#38261C]"
+          >
+            {copying ? "Copying…" : "Use selected lists"}
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={uploadOpen}
+        onOpenChange={(open) => {
+          setUploadOpen(open);
+          if (!open) {
+            setCsvError("");
+            setCsvFileName("");
+            setDragOver(false);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg rounded-3xl p-6 text-center space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-[#6E3B1C]/10 text-[#6E3B1C] mx-auto flex items-center justify-center">
+            <FileSpreadsheet className="w-6 h-6" />
+          </div>
+          <DialogHeader>
+            <DialogTitle className="font-serif font-bold text-lg text-foreground">Import from Spreadsheet</DialogTitle>
+            <DialogDescription className="text-left text-xs leading-relaxed text-muted-foreground space-y-1.5">
+              <span className="block">
+                <span className="font-semibold text-foreground">Required. </span>
+                Guest Name, Guest Group, and WhatsApp Phone Number.
+              </span>
+              <span className="block">
+                <span className="font-semibold text-foreground">Optional. </span>
+                Email. Leave it blank when you do not have one. Party size and preference are chosen by the guest.
+              </span>
+              <span className="block">
+                <span className="font-semibold text-foreground">Phone. </span>
+                Country code, then the number, for example +234 801 234 5678. +234 is Nigeria, not the only code. Do not add quotation marks. Extra spaces are removed.
+              </span>
+              <span className="block pt-1">
+                {guests.length} of {capacity} guests added.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <input
+            ref={csvInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (file) void readCsvFile(file);
+            }}
+          />
+          <div
+            onClick={() => csvInputRef.current?.click()}
+            onDragOver={(event) => {
+              event.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(event) => {
+              event.preventDefault();
+              setDragOver(false);
+              const file = event.dataTransfer.files?.[0];
+              if (file) void readCsvFile(file);
+            }}
+            className={`p-8 border-2 border-dashed rounded-2xl bg-muted/20 space-y-2 cursor-pointer transition-colors ${
+              dragOver ? "border-[#6E3B1C] bg-[#6E3B1C]/5" : "border-[#EBE3D9] hover:border-[#6E3B1C]"
+            }`}
+          >
+            <Upload className="w-8 h-8 text-muted-foreground mx-auto" />
+            <p className="text-xs font-semibold text-foreground">{csvFileName || "Click to upload or drag & drop"}</p>
+            <p className="text-[11px] text-muted-foreground">CSV file, up to 5,000 rows</p>
+          </div>
+          {csvError && <p className="text-xs text-[#B33927]">{csvError}</p>}
+          <a
+            href={SAMPLE_GUEST_CSV}
+            download="guest-list-sample.csv"
+            className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-[#6E3B1C] hover:underline"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Download sample CSV
+          </a>
+          <DialogFooter className="flex justify-between sm:justify-between pt-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setUploadOpen(false)} className="text-xs rounded-xl">
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => csvInputRef.current?.click()}
+              className="text-xs rounded-xl bg-[#6E3B1C] hover:bg-[#5C3117] text-white"
+            >
+              <Upload className="w-3.5 h-3.5 mr-1.5" />
+              Upload File
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
