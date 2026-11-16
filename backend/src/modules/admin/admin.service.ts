@@ -2069,10 +2069,10 @@ export class AdminService {
     const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`;
     const sent = await this.mail.sendEmail(
       email,
-      'You are invited to McEniesVite',
+      'You are invited to Eventiq',
       [
         `<p>Hello ${dto.fullName.trim()},</p>`,
-        `<p>You now have ${dto.role} access to the McEniesVite platform.</p>`,
+        `<p>You now have ${dto.role} access to the Eventiq platform.</p>`,
         `<p>Sign in at <a href="${loginUrl}">${loginUrl}</a></p>`,
         `<p>Email: <strong>${email}</strong></p>`,
         `<p>Temporary password: <strong>${temporaryPassword}</strong></p>`,
@@ -2184,7 +2184,7 @@ export class AdminService {
   private platformRoleLabel(jobTitle: string | null | undefined, email: string) {
     const labels = ['Super Admin', 'Admin', 'Platform Operator'];
     if (jobTitle && labels.includes(jobTitle)) return jobTitle;
-    const bootstrap = (process.env.ADMIN_EMAIL || 'admin@mceniesvite.com').toLowerCase();
+    const bootstrap = (process.env.ADMIN_EMAIL || 'admin@eventiq.com').toLowerCase();
     if (email.toLowerCase() === bootstrap) return 'Super Admin';
     return 'Admin';
   }

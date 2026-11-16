@@ -157,7 +157,7 @@ export const SWAGGER_TAG_GROUPS = [
 ];
 
 export const SWAGGER_DESCRIPTION = `
-McEniesVite Event OS - six-role API. Tag folders on the left are grouped by role.
+Eventiq Event OS - six-role API. Tag folders on the left are grouped by role.
 
 Roles
 - ADMIN: folder 01 Super Admin
@@ -173,7 +173,7 @@ Auth
 3. JSON envelope: { statusCode, success, message, data }
 
 Default admin
-- ADMIN: admin@mceniesvite.com (created on first start from ADMIN_EMAIL / ADMIN_PASSWORD)
+- ADMIN: admin@eventiq.com (created on first start from ADMIN_EMAIL / ADMIN_PASSWORD)
 
 Every other account is created through the register endpoints. IDs are cuid strings.
 `;

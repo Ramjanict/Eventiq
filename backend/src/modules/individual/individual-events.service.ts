@@ -648,7 +648,7 @@ export class IndividualEventsService {
       id: updated.id,
       status: 'active',
       rawStatus: updated.status,
-      message: 'Event published and active on McEniesVite turnstile network.',
+      message: 'Event published and active on Eventiq turnstile network.',
     };
   }
 

@@ -27,12 +27,12 @@ export class CloudinaryService {
     if (apiKey && secret) {
       const timestamp = String(Math.floor(Date.now() / 1000));
       const signature = createHash('sha1')
-        .update(`folder=mceniesvite&timestamp=${timestamp}${secret}`)
+        .update(`folder=eventiq&timestamp=${timestamp}${secret}`)
         .digest('hex');
       form.append('api_key', apiKey);
       form.append('timestamp', timestamp);
       form.append('signature', signature);
-      form.append('folder', 'mceniesvite');
+      form.append('folder', 'eventiq');
     } else {
       form.append('upload_preset', preset);
     }

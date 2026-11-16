@@ -616,7 +616,7 @@ export class CommunicationsService {
   }
 
   private templateText(value: string) {
-    return value.replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim().slice(0, 900) || 'McEniesVite';
+    return value.replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim().slice(0, 900) || 'Eventiq';
   }
 
   private templateSlotCache: number | null = null;

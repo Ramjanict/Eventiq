@@ -2,7 +2,7 @@ import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/commo
 import { PrismaClient, UserRole, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
-const DEFAULT_ADMIN_EMAIL = 'admin@mceniesvite.com';
+const DEFAULT_ADMIN_EMAIL = 'admin@eventiq.com';
 const DEFAULT_ADMIN_PASSWORD = 'Password123!';
 
 @Injectable()

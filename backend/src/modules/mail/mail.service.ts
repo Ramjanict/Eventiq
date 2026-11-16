@@ -42,7 +42,7 @@ export class MailService {
       process.env.RESEND_FROM_EMAIL ||
       '';
     if (!configured || /@example\.com\b/i.test(configured)) {
-      return 'McEniesVite <onboarding@resend.dev>';
+      return 'Eventiq <onboarding@resend.dev>';
     }
     return configured;
   }
@@ -91,13 +91,13 @@ export class MailService {
           body: JSON.stringify({
             from: fromEmail,
             to: [delivery.to],
-            subject: 'Reset Your McEniesVite Password',
+            subject: 'Reset Your Eventiq Password',
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;">
                 <h2 style="color: #0f172a; margin-bottom: 16px;">Password Reset Request</h2>
                 <p style="color: #475569; font-size: 16px;">Hello ${fullName || 'there'},</p>
                 <p style="color: #475569; font-size: 15px; line-height: 1.5;">
-                  We received a request to reset your password for your McEniesVite Event OS account. Click the button below to set a new password:
+                  We received a request to reset your password for your Eventiq Event OS account. Click the button below to set a new password:
                 </p>
                 <div style="margin: 28px 0; text-align: center;">
                   <a href="${resetUrl}" style="background-color: #2563eb; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">

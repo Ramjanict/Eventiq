@@ -816,7 +816,7 @@ export class AuthService {
             phonenumber: user.phone || '',
           },
           customizations: {
-            title: `McEnies Vite - ${plan.name}`,
+            title: `Eventiq - ${plan.name}`,
             description: `Subscription/Pass payment for ${plan.name}`,
           },
           meta: {

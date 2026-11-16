@@ -310,7 +310,7 @@ export class IndividualGateService {
         : '<p>Sign in with your existing gate staff password.</p>';
       await this.mailService.sendEmail(
         email,
-        'You are invited as gate staff on McEniesVite',
+        'You are invited as gate staff on Eventiq',
         [
           `<p>Hello ${dto.fullName},</p>`,
           `<p>${organizer?.fullName || 'Your organizer'} has invited you to help manage guest entry.</p>`,
