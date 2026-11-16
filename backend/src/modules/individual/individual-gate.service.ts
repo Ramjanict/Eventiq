@@ -31,13 +31,13 @@ export class IndividualGateService {
   private frontendBase() {
     const configured = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
     if (!configured || configured.includes('localhost') || configured.includes('127.0.0.1')) {
-      return 'https://omolaraeniolaos-frontend.vercel.app';
+      return 'https://eventiq-ochre.vercel.app';
     }
     return configured;
   }
 
   private inviteSecret() {
-    return process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || 'book-secret-access-key';
+    return process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || 'eventiq-secret-access-key-2026';
   }
 
   private signInviteToken(payload: {

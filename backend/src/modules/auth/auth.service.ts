@@ -51,11 +51,11 @@ export class AuthService {
     this.accessSecret =
       this.configService?.get<string>('JWT_ACCESS_SECRET') ||
       process.env.JWT_ACCESS_SECRET ||
-      'book-secret-access-key';
+      'eventiq-secret-access-key-2026';
     this.refreshSecret =
       this.configService?.get<string>('JWT_REFRESH_SECRET') ||
       process.env.JWT_REFRESH_SECRET ||
-      'book-secret-refresh-key';
+      'eventiq-secret-refresh-key-2026';
     this.accessExpiresIn =
       this.configService?.get<string>('JWT_ACCESS_EXPIRES_IN') ||
       process.env.JWT_ACCESS_EXPIRES_IN ||

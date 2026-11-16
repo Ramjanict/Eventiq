@@ -17,7 +17,7 @@ import { MailModule } from '../mail/mail.module';
         secret:
           configService.get<string>('JWT_ACCESS_SECRET') ||
           process.env.JWT_ACCESS_SECRET ||
-          'book-secret-access-key',
+          'eventiq-secret-access-key-2026',
         signOptions: {
           expiresIn:
             configService.get<string>('JWT_ACCESS_EXPIRES_IN') ||

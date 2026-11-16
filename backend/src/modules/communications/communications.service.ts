@@ -944,7 +944,7 @@ export class CommunicationsService {
   private frontendUrl() {
     const configured = (this.env('FRONTEND_URL') || '').replace(/\/$/, '');
     if (!configured || configured.includes('localhost') || configured.includes('127.0.0.1')) {
-      return 'https://omolaraeniolaos-frontend.vercel.app';
+      return 'https://eventiq-ochre.vercel.app';
     }
     return configured;
   }

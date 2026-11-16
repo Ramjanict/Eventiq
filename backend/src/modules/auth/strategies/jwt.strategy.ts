@@ -19,7 +19,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       secretOrKey:
         process.env.JWT_ACCESS_SECRET ||
         process.env.JWT_SECRET ||
-        'book-secret-access-key',
+        'eventiq-secret-access-key-2026',
     });
   }
 
