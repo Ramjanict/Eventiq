@@ -249,7 +249,8 @@ model AgencyClient {
   contactPhone  String?
   logoUrl       String?
   notes         String?       @db.Text
-  status        String        @default("active")   contractTotal Float         @default(0.0)
+  status        String        @default("active")
+  contractTotal Float         @default(0.0)
   currency      String        @default("USD")
 
   events   Event[]         @relation("ClientEvents")
@@ -335,7 +336,8 @@ model VenueSpace {
   imageUrl     String?
   address      String?
   description  String?      @db.Text
-  amenities    String[]   bookings     VenueBooking[]
+  amenities    String[]
+  bookings     VenueBooking[]
   eventsHosted Event[]
   tableZones   TableZone[]
 
@@ -488,7 +490,8 @@ model TicketTier {
   capacity       Int
   soldCount      Int            @default(0)
   description    String?        @db.Text
-  perks          String[]   salesStartDate DateTime?
+  perks          String[]
+  salesStartDate DateTime?
   salesEndDate   DateTime?
   isTransferable Boolean        @default(true)
   isActive       Boolean        @default(true)
@@ -507,7 +510,8 @@ model PromoCode {
   eventId       String
   event         Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
   code          String
-  discountType  String   discountValue Float
+  discountType  String
+  discountValue Float
   maxUses       Int?
   usedCount     Int       @default(0)
   expiresAt     DateTime?
@@ -666,7 +670,8 @@ model GateScanLog {
   staffId       String?
   staff         GateStaffProfile? @relation(fields: [staffId], references: [id], onDelete: SetNull)
   scannedAt     DateTime          @default(now())
-  scanResult    String   gateTurnstile String            @default("A-1")
+  scanResult    String
+  gateTurnstile String            @default("A-1")
 
   @@index([attendeeId])
   @@index([scannedAt])
@@ -836,7 +841,8 @@ model PlatformAuditLog {
   action       String
   targetEntity String
   ipAddress    String
-  status       String  @default("success")   metadata     Json?
+  status       String  @default("success")
+  metadata     Json?
 
   timestamp DateTime @default(now())
 
