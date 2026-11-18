@@ -9,7 +9,7 @@ import { useLoginUserMutation } from '@/store/Auth/authApi';
 import { setCredentials } from '@/store/Auth/authSlice';
 import { useAppDispatch } from '@/store/store';
 
-const API_ROOT = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
+const API_ROOT = (process.env.NEXT_PUBLIC_API_URL || 'https://eventiq-m71e.onrender.com/api').replace(/\/$/, '');
 
 function GateStaffLogin() {
   const router = useRouter();

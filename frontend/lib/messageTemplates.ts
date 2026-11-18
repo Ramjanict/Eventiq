@@ -1,6 +1,6 @@
 import { store } from '@/store/store';
 
-const API_ROOT = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
+const API_ROOT = (process.env.NEXT_PUBLIC_API_URL || 'https://eventiq-m71e.onrender.com/api').replace(/\/$/, '');
 
 export type TemplateChannel = 'WHATSAPP' | 'SMS' | 'EMAIL';
 

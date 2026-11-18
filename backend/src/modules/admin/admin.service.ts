@@ -2066,7 +2066,7 @@ export class AdminService {
       },
     });
 
-    const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`;
+    const loginUrl = `${process.env.FRONTEND_URL || 'https://eventiq-ochre.vercel.app'}/login`;
     const sent = await this.mail.sendEmail(
       email,
       'You are invited to Eventiq',

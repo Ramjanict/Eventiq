@@ -794,7 +794,7 @@ export class AuthService {
     const secretKey = process.env.FLUTTERWAVE_SECRET_KEY;
     if (!secretKey || plan.price <= 0) return null;
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://eventiq-ochre.vercel.app';
     const txRef = `SUB-${user.id.slice(0, 8)}-${Date.now()}`;
 
     try {

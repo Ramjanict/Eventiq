@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const BACKEND_URL =
   process.env.BACKEND_API_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
-  'http://localhost:5000/api';
+  'https://eventiq-m71e.onrender.com/api';
 
 export async function GET(req: NextRequest) {
   try {

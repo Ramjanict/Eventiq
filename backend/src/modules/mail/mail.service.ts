@@ -15,7 +15,7 @@ export class MailService {
     this.frontendUrl =
       this.configService?.get<string>('FRONTEND_URL') ||
       process.env.FRONTEND_URL ||
-      'http://localhost:3000';
+      'https://eventiq-ochre.vercel.app';
   }
 
   private getApiKey(): string {
@@ -32,7 +32,7 @@ export class MailService {
       this.configService?.get<string>('FRONTEND_URL') ||
       process.env.FRONTEND_URL ||
       this.frontendUrl ||
-      'http://localhost:3000'
+      'https://eventiq-ochre.vercel.app'
     );
   }
 

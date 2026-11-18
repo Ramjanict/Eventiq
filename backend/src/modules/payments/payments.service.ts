@@ -50,7 +50,7 @@ export class PaymentsService {
     this.frontendUrl =
       this.configService?.get<string>('FRONTEND_URL') ||
       process.env.FRONTEND_URL ||
-      'http://localhost:3000';
+      'https://eventiq-ochre.vercel.app';
   }
 
   getConfig(): PaymentConfigDto {

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 
-const API_ROOT = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
+const API_ROOT = (process.env.NEXT_PUBLIC_API_URL || 'https://eventiq-m71e.onrender.com/api').replace(/\/$/, '');
 
 interface InvitationDetails {
   organizerName: string;

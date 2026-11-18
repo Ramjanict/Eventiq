@@ -79,8 +79,8 @@ npx prisma generate
 npm run dev
 ```
 
-* **API Base URL**: `http://localhost:5000/api`
-* **Interactive Swagger Documentation**: `http://localhost:5000/api/docs`
+* **Live Backend API**: `https://eventiq-m71e.onrender.com/api` (Local: `http://localhost:5000/api`)
+* **Interactive Swagger Documentation**: `https://eventiq-m71e.onrender.com/api/docs` (Local: `http://localhost:5000/api/docs`)
 
 ### 2. Frontend Setup (Next.js)
 
@@ -94,7 +94,7 @@ npm install
 npm run dev
 ```
 
-* **Frontend Web App**: `http://localhost:3000`
+* **Live Frontend Web App**: `https://eventiq-ochre.vercel.app` (Local: `http://localhost:3000`)
 
 ---
 
@@ -104,29 +104,37 @@ npm run dev
 
 ```env
 PORT=5000
-DATABASE_URL="postgresql://user:password@localhost:5432/mceniesvite?schema=public"
+DATABASE_URL="postgresql://user:password@localhost:5432/eventiq?sslmode=require"
 
 # Authentication
-JWT_ACCESS_SECRET="your-jwt-access-secret"
-JWT_REFRESH_SECRET="your-jwt-refresh-secret"
-JWT_ACCESS_EXPIRES_IN="15m"
+JWT_ACCESS_SECRET="eventiq-secret-access-key-2026"
+JWT_REFRESH_SECRET="eventiq-secret-refresh-key-2026"
+JWT_ACCESS_EXPIRES_IN="50m"
 JWT_REFRESH_EXPIRES_IN="7d"
+
+# Default Platform Admin
+ADMIN_EMAIL="admin@eventiq.com"
+ADMIN_PASSWORD="Password123!"
+ADMIN_NAME="Eventiq Platform Admin"
 
 # Email Delivery (Resend)
 RESEND_API_KEY="re_..."
-RESEND_FROM_EMAIL="onboarding@resend.dev"
-FRONTEND_URL="http://localhost:3000"
+RESEND_FROM_EMAIL="Eventiq <onboarding@resend.dev>"
+RESEND_TEST_INBOX="your-email@example.com"
+FRONTEND_URL="https://eventiq-ochre.vercel.app"
+BACKEND_URL="https://eventiq-m71e.onrender.com"
 
-# Payments (Flutterwave / Stripe)
+# Payments (Flutterwave)
 FLUTTERWAVE_PUBLIC_KEY="FLWPUBK_TEST-..."
 FLUTTERWAVE_SECRET_KEY="FLWSECK_TEST-..."
 FLUTTERWAVE_ENCRYPTION_KEY="..."
+FLUTTERWAVE_SECRET_HASH="..."
 ```
 
 ### Frontend (`frontend/.env.local`)
 
 ```env
-NEXT_PUBLIC_API_URL="http://localhost:5000/api"
+NEXT_PUBLIC_API_URL="https://eventiq-m71e.onrender.com/api"
 ```
 
 ---

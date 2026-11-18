@@ -12,10 +12,7 @@ const getBaseUrl = (): string => {
   if (process.env.NEXT_PUBLIC_BACKEND_URL) {
     return process.env.NEXT_PUBLIC_BACKEND_URL;
   }
-  if (typeof window !== "undefined") {
-    return "/api";
-  }
-  return "http://localhost:5000/api";
+  return "https://eventiq-m71e.onrender.com/api";
 };
 
 const baseQueryAPI = fetchBaseQuery({
