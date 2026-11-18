@@ -41,7 +41,10 @@ next-env.d.ts
 Thumbs.db
 *.pem
 .idea/
-!.vscode/extensions.json
+.vscode/
+**/.vscode/
+docs/
+**/docs/
 
 # Temporary scripts & artifacts
 branch_structure.json

@@ -44,8 +44,8 @@ yarn-error.log*
 Thumbs.db
 *.pem
 .idea/
-.vscode/*
-!.vscode/extensions.json
+.vscode/
+docs/
 *.sublime-workspace
 *.swp
 *.swo
