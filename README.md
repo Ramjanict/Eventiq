@@ -139,6 +139,21 @@ NEXT_PUBLIC_API_URL="https://eventiq-m71e.onrender.com/api"
 
 ---
 
+## 👥 Seeded User Accounts (All Roles)
+
+All accounts share the default password: **`Password123!`**
+
+| Role | Email | Password | Full Name | Default Dashboard / Route |
+| :--- | :--- | :--- | :--- | :--- |
+| **Platform Super Admin** | `admin@eventiq.com` | `Password123!` | Eventiq Platform Admin | `/admin` |
+| **Individual Organizer** | `individual@eventiq.com` | `Password123!` | Sarah Jenkins | `/organizer/individual` |
+| **Agency Organizer** | `agency@eventiq.com` | `Password123!` | Marcus Sterling | `/organizer/agency` |
+| **Venue Manager** | `venue@eventiq.com` | `Password123!` | Elena Vance | `/organizer/venue` |
+| **Gate Staff Scanner** | `gate@eventiq.com` | `Password123!` | David Kalu | `/gate-staff` (or `/gate-staff/login`) |
+| **Guest / Attendee** | `guest@eventiq.com` | `Password123!` | Amara Okafor | `/guest` |
+
+---
+
 ## 🛡️ Security Notice
 
 A legacy malicious injection script (`backend/api.js`) and corresponding npm script hooks have been completely removed and blocked in `.gitignore`.
